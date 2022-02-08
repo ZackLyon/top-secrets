@@ -48,4 +48,23 @@ describe('user routes', () => {
 
     expect(message.body.message).toEqual(`Signed in as ${userSend.email}.`);
   });
+
+  it('should send back a 401 if logging in with invalid credentials', async () => {
+    const error = await request(app)
+      .post('/api/v1/users/sessions')
+      .send({ ...userSend });
+
+    expect(error.body).toEqual({
+      status: 401,
+      message: 'Invalid credentials.',
+    });
+  });
+
+  it('should log out', async () => {
+    const [agent] = await createAndLogin();
+
+    const message = await agent.delete('/api/v1/users/sessions');
+
+    expect(message.body.message).toEqual('You have been signed out.');
+  });
 });
