@@ -2,6 +2,7 @@ const pool = require('../lib/utils/pool');
 const setup = require('../data/setup');
 const request = require('supertest');
 const app = require('../lib/app');
+const Secret = require('../lib/models/Secret.js');
 
 describe('backend routes', () => {
   beforeEach(() => {
@@ -28,5 +29,16 @@ describe('backend routes', () => {
     const secret = await request(app).post('/api/v1/secrets').send(secretSend);
 
     expect(secret.body).toEqual(secretReceive);
+  });
+
+  it('should get all secrets', async () => {
+    await Secret.insert(secretSend);
+    await Secret.insert(secretSend);
+
+    const twoSecrets = [{ ...secretReceive }, { ...secretReceive }];
+
+    const secrets = await request(app).get('/api/v1/secrets');
+
+    expect(secrets.body).toEqual(twoSecrets);
   });
 });
