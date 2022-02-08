@@ -3,6 +3,8 @@ const setup = require('../data/setup');
 const request = require('supertest');
 const app = require('../lib/app');
 const Secret = require('../lib/models/Secret.js');
+const UserService = require('../lib/services/UserService.js');
+const req = require('express/lib/request');
 
 describe('backend routes', () => {
   beforeEach(() => {
@@ -25,20 +27,48 @@ describe('backend routes', () => {
     createdAt: expect.any(String),
   };
 
+  const fakeUser = {
+    email: 'giJoe@defense.gov',
+    password: 'Go Joe!',
+  };
+
+  const createAndLogin = async () => {
+    const agent = request.agent(app);
+
+    await UserService.create({ ...fakeUser });
+
+    await agent.post('/api/v1/users/sessions').send({ ...fakeUser });
+
+    return agent;
+  };
+
   it('should create a secret', async () => {
-    const secret = await request(app).post('/api/v1/secrets').send(secretSend);
+    const agent = await createAndLogin();
+
+    const secret = await agent.post('/api/v1/secrets').send(secretSend);
 
     expect(secret.body).toEqual(secretReceive);
   });
 
   it('should get all secrets', async () => {
+    const agent = await createAndLogin();
+
     await Secret.insert(secretSend);
     await Secret.insert(secretSend);
 
     const twoSecrets = [{ ...secretReceive }, { ...secretReceive }];
 
-    const secrets = await request(app).get('/api/v1/secrets');
+    const secrets = await agent.get('/api/v1/secrets');
 
     expect(secrets.body).toEqual(twoSecrets);
+  });
+
+  it('should give a 401 response if not logged in', async () => {
+    const error = await request(app).get('/api/v1/secrets');
+
+    expect(error.body).toEqual({
+      status: 401,
+      message: 'You must be signed in for access.',
+    });
   });
 });
